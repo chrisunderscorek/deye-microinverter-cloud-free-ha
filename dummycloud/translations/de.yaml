@@ -1,0 +1,18 @@
+configuration:
+  LOGLEVEL:
+    name: Log-Level
+    description: Legt fest, wie detailliert die App in das Home-Assistant-Log schreibt.
+  MQTT_BROKER_URL:
+    name: MQTT-Broker-URL
+    description: MQTT-Verbindungs-URL, zum Beispiel mqtt://core-mosquitto.
+  MQTT_USERNAME:
+    name: MQTT-Benutzername
+    description: Optionaler MQTT-Benutzername, wenn der Broker Authentifizierung verlangt.
+  MQTT_PASSWORD:
+    name: MQTT-Passwort
+    description: Optionales MQTT-Passwort, wenn der Broker Authentifizierung verlangt.
+  MQTT_CHECK_CERT:
+    name: MQTT-TLS-Zertifikat pruefen
+    description: Nur deaktivieren, wenn mqtts mit selbstsigniertem Zertifikat genutzt wird.
+network:
+  10000/TCP: Deye-Inverter-Cloud-Endpunkt.

@@ -23,6 +23,7 @@ I'd still keep the firewall rules preventing the inverter from phoning home in p
 ## Deployment
 
 The dummycloud can be started using `npm run start`. Next to this readme, there's also a dockerfile provided.
+For HAOS, this folder is also a Home Assistant app with UI-configurable MQTT settings. See [DOCS.md](./DOCS.md).
 
 A `docker-compose.yml` entry could for example look like this:
 

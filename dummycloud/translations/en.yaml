@@ -1,0 +1,18 @@
+configuration:
+  LOGLEVEL:
+    name: Log level
+    description: Controls how much detail the app writes to the Home Assistant log.
+  MQTT_BROKER_URL:
+    name: MQTT broker URL
+    description: MQTT broker connection URL, for example mqtt://core-mosquitto.
+  MQTT_USERNAME:
+    name: MQTT username
+    description: Optional MQTT username when the broker requires authentication.
+  MQTT_PASSWORD:
+    name: MQTT password
+    description: Optional MQTT password when the broker requires authentication.
+  MQTT_CHECK_CERT:
+    name: Check MQTT TLS certificate
+    description: Disable this only when using mqtts with a self-signed certificate.
+network:
+  10000/TCP: Deye inverter cloud endpoint.
