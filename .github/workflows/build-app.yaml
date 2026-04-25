@@ -1,0 +1,77 @@
+name: Build app
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        required: true
+        type: string
+      publish:
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build ${{ inputs.app }}
+    runs-on: ubuntu-latest
+    outputs:
+      images: ${{ steps.build.outputs.images }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6.0.2
+
+      - name: Read app metadata
+        id: info
+        uses: home-assistant/actions/helpers/info@master
+        with:
+          path: ./${{ inputs.app }}
+
+      - name: Prepare build metadata
+        id: meta
+        env:
+          IMAGE: ${{ steps.info.outputs.image }}
+          VERSION: ${{ steps.info.outputs.version }}
+        run: |
+          echo "image_name=${IMAGE##*/}" >> "${GITHUB_OUTPUT}"
+          echo "registry_prefix=${IMAGE%/*}" >> "${GITHUB_OUTPUT}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Prepare architecture matrix
+        id: matrix
+        uses: home-assistant/builder/actions/prepare-multi-arch-matrix@2026.03.2
+        with:
+          path: ./${{ inputs.app }}
+
+      - name: Build images
+        id: build
+        uses: home-assistant/builder/actions/build-image@2026.03.2
+        with:
+          args: |
+            BUILD_VERSION=${{ steps.meta.outputs.version }}
+          architectures: ${{ steps.matrix.outputs.architectures }}
+          container: ${{ steps.meta.outputs.image_name }}
+          context: ./${{ inputs.app }}
+          image: ${{ steps.meta.outputs.registry_prefix }}
+          labels: |
+            org.opencontainers.image.title=${{ steps.info.outputs.name }}
+            org.opencontainers.image.description=${{ steps.info.outputs.description }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+          target: /data
+          version: ${{ steps.meta.outputs.version }}
+          push: ${{ inputs.publish }}
+
+  publish:
+    name: Publish ${{ inputs.app }}
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ inputs.publish }}
+    steps:
+      - name: Publish multi-architecture manifest
+        uses: home-assistant/builder/actions/publish-multi-arch-manifest@2026.03.2
+        with:
+          images: ${{ needs.build.outputs.images }}

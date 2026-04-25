@@ -1,0 +1,21 @@
+name: Builder
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  dummycloud:
+    name: Deye Dummycloud
+    uses: ./.github/workflows/build-app.yaml
+    with:
+      app: dummycloud
+      publish: ${{ github.event_name != 'pull_request' }}
