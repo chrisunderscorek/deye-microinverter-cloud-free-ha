@@ -195,6 +195,28 @@ It will also autoconfigure entities for home assistant.
 It is however a bit more complicated than the polling approaches, as it requires you to understand how networks work
 and how to deploy a service somewhere. Nothing too arcane of course but if you don't know anything about linux, you might want to pass on this.
 
+#### Installing the Home Assistant app on HAOS
+
+On Home Assistant OS, the dummycloud can be installed as an app from this repository.
+
+1. Open Home Assistant and go to `Settings` -> `Apps`.
+2. Open `Install app`.
+3. Open the repository menu and choose `Repositories` or `Add repository`.
+4. Add this repository URL:
+
+```text
+https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha
+```
+
+5. Install the `Deye Dummycloud` app.
+6. Configure `MQTT_BROKER_URL`. For the local Mosquitto app on the same HAOS host, use:
+
+```text
+mqtt://core-mosquitto:1883
+```
+
+After starting the app, configure the inverter cloud server host to the HAOS IP address and port `10000`.
+
 For further information, check out the [dummycloud](./dummycloud) folder.
 
 ## Misc
