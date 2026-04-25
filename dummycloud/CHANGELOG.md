@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2
+
+- Add Home Assistant app logo and icon assets for the Deye Dummycloud store entry.
+
 ## 1.1.1
 
 - Remove the trailing period from the Home Assistant app description to avoid a duplicated punctuation mark in the app UI.
