@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.5
+
+- Recognize Solarman `REPORT` packets in the legacy Node.js protocol parser.
+- Keep the legacy app documentation distinct from the Rust v2 app.
+
 ## 1.1.4
 
 - Add a custom AppArmor profile for the Home Assistant app package.
