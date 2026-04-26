@@ -28,7 +28,8 @@ RUN apk add --no-cache ca-certificates libgcc openssl
 
 COPY --from=builder /build/target/release/deye-dummycloud /usr/local/bin/deye-dummycloud
 COPY run.sh /run.sh
-COPY config.yaml apparmor.txt CHANGELOG.md DOCS.md LICENSE README.md icon.png /app/metadata/
+COPY config.yaml apparmor.txt CHANGELOG.md DOCS.md LICENSE icon.png /app/metadata/
+COPY Readme.md /app/metadata/README.md
 
 RUN ln -s icon.png /app/metadata/logo.png \
     && chmod a+x /run.sh

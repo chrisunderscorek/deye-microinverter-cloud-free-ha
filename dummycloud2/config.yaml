@@ -1,5 +1,5 @@
 name: Deye Dummycloud v2
-version: "2.0.2"
+version: "2.0.3"
 slug: deye_dummycloud2
 description: Rust reimplementation of the local Deye Solarman cloud replacement; lighter runtime with lower memory use and no Node.js dependency
 url: https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha/tree/master/dummycloud2
@@ -10,7 +10,7 @@ arch:
 startup: application
 boot: auto
 init: false
-apparmor: deye_dummycloud2
+apparmor: true
 ports:
   10000/tcp: 10000
 ports_description:

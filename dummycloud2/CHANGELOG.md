@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.3
+
+- Use the boolean AppArmor metadata value expected by the Home Assistant OS 2026.4 Supervisor validator.
+- Restore the v2 readme filename used by the existing Home Assistant OS app package.
+
 ## 2.0.2
 
 - Include Home Assistant app metadata files in the runtime image for easier inspection and fallback tooling.
