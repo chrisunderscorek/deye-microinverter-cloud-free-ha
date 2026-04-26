@@ -1,6 +1,6 @@
 # Deye-dummycloud
 
-This is a small Node.js service that mocks the deye solarman cloud and publishes all the data to an MQTT broker.
+This is a small service that mocks the deye solarman cloud and publishes all the data to an MQTT broker.
 It also takes care of Home Assistant autodiscovery leading to things just working.
 
 ![dummycloud_demo.png](../img/dummycloud_demo.png)
@@ -22,11 +22,26 @@ The dummycloud is configured using environment variables to be container-friendl
 - `MQTT_USERNAME` (no default, optional.)
 - `MQTT_PASSWORD` (no default, optional.)
 - `MQTT_CHECK_CERT` set to `false` for using `mqtts` with self signed certificate (defaults to `true`)
+- `DUMP_CLIENT_STREAM` (optional) set to `true` or a directory path to dump raw inverter TCP streams for protocol analysis.
 
 ## Inverter Setup
 
 Using the `/config_hide.html` of the inverter webinterface, simply point `Server A Setting` and `Optional Server Setting` to the host this is running on.
 I'd still keep the firewall rules preventing the inverter from phoning home in place for good measure.
+
+## MQTT diagnostics
+
+Besides PV, grid, and inverter telemetry, dummycloud publishes Home Assistant diagnostic entities for logger status:
+
+- `logger/wifi_ssid`
+- `logger/wifi_signal`
+- `logger/uptime_seconds`
+- `logger/report_time`
+- `logger/last_reboot`
+
+The Wi-Fi signal value is derived from observed `0x43` WIFI packets and is published only when the status text matches
+the SSID from the logger handshake. The last reboot time is derived from the observed `0x48` REPORT packet timestamp
+minus the report uptime counter.
 
 ## Home Assistant OS Deployment
 

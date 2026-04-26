@@ -226,7 +226,7 @@ In local captures, the logger connects to the dummycloud TCP endpoint and usuall
 |------|------|---------------|
 | `0x41` | `HANDSHAKE` | Logger metadata such as firmware version, local IP, hardware/software revision, and Wi-Fi SSID. |
 | `0x42` | `DATA` | Microinverter telemetry. The dummycloud currently uses this for PV voltage/current/power, daily and total energy, grid values, radiator temperature, MPPT count, and MQTT discovery. |
-| `0x43` | `WIFI` | Periodic Wi-Fi/logger status packets. In the observed firmware these mostly repeat SSID/status-like information. |
+| `0x43` | `WIFI` | Periodic Wi-Fi/logger status packets. In the observed firmware these include the Wi-Fi SSID/status text and a signal-quality byte. |
 | `0x48` | `REPORT` | Short logger report packet. [pysolarmanv5](https://pysolarmanv5.readthedocs.io/) also names this Solarman V5 type `REPORT`. |
 | `0x47` | `HEARTBEAT` | Keepalive packet. |
 
@@ -237,6 +237,15 @@ so far are a payload version byte, an uptime-like counter that resets after logg
 which reconstructs the packet time, and three status bytes that were stable in the captures. The remaining 44 bytes were
 filled with `0xff`, so they currently look reserved or empty. This makes `REPORT` useful for logger liveness, clock sanity
 checks, and reboot detection, but not for additional PV/grid measurements at this point.
+
+The observed `WIFI` payload is 47 bytes. Bytes `15..45` contain a zero-padded text field. In the captures this was either
+the configured Wi-Fi SSID or another short logger status token. Byte `45` behaved like Wi-Fi signal quality in percent
+and byte `46` like a link/status flag. The dummycloud only publishes the signal value from the newest WIFI record whose
+text field matches the SSID from the preceding handshake, so older cached status records do not overwrite the live value.
+
+The Home Assistant MQTT discovery now includes diagnostic entities for the logger Wi-Fi SSID, Wi-Fi signal, uptime at the
+latest report, report time, and derived last reboot time. The captures did not show a plaintext Wi-Fi password.
+Keep raw stream dumps out of git because they may still contain local network identifiers.
 
 #### Installing the Home Assistant app on HAOS
 
