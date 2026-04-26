@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.4
+
+- Let Home Assistant OS load the bundled AppArmor profile from `apparmor.txt`, matching the legacy app package.
+
 ## 2.0.3
 
 - Use the boolean AppArmor metadata value expected by the Home Assistant OS 2026.4 Supervisor validator.
