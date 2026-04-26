@@ -1,3 +1,5 @@
 /dummycloud/node_modules/
 /dummycloud/target/
 /dummycloud/stream-dumps/
+/dummycloud2/target/
+/dummycloud2/stream-dumps/
