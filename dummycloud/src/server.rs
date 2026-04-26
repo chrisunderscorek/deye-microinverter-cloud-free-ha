@@ -13,7 +13,7 @@ use crate::config::StreamDumpConfig;
 use crate::mqtt::MqttPublisher;
 use crate::protocol::{
     PORT, RequestType, build_time_response, packet_total_len, parse_data_payload,
-    parse_logger_payload, parse_packet,
+    parse_logger_payload, parse_packet, parse_report_payload,
 };
 
 const MAX_PACKET_LEN: usize = 4096;
@@ -191,10 +191,18 @@ async fn process_packet(
                 return Ok(());
             }
         },
-        RequestType::Wifi
-        | RequestType::Heartbeat
-        | RequestType::Report
-        | RequestType::Unknown(_) => {}
+        RequestType::Report => match parse_report_payload(&packet) {
+            Ok(payload) => debug!(
+                "REPORT packet data from {remote_address}: version={}, uptime_seconds={}, reconstructed_timestamp_seconds={}, status={:02x?}, reserved_bytes={}",
+                payload.version,
+                payload.uptime_seconds,
+                payload.reconstructed_timestamp_seconds(),
+                payload.unknown_status,
+                payload.reserved.len()
+            ),
+            Err(err) => debug!("Could not parse REPORT payload from {remote_address}: {err:#}"),
+        },
+        RequestType::Wifi | RequestType::Heartbeat | RequestType::Unknown(_) => {}
     }
 
     let response = build_time_response(&packet);

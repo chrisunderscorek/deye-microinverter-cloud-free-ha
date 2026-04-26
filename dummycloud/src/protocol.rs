@@ -63,6 +63,22 @@ pub struct InverterMeta {
     pub mppt_count: u8,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ReportPayload {
+    pub version: u8,
+    pub timestamp_offset_seconds: u32,
+    pub uptime_seconds: u32,
+    pub base_timestamp_seconds: u32,
+    pub unknown_status: [u8; 3],
+    pub reserved: Vec<u8>,
+}
+
+impl ReportPayload {
+    pub fn reconstructed_timestamp_seconds(&self) -> u64 {
+        self.base_timestamp_seconds as u64 + self.timestamp_offset_seconds as u64
+    }
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum RequestType {
     Handshake,
@@ -143,6 +159,20 @@ pub fn parse_data_payload(packet: &Packet) -> Result<Option<DataPayload>> {
         0x08 => parse_microinverter_payload(packet).map(Some),
         _ => Ok(None),
     }
+}
+
+pub fn parse_report_payload(packet: &Packet) -> Result<ReportPayload> {
+    let payload = &packet.payload;
+    require_len(payload, 16)?;
+
+    Ok(ReportPayload {
+        version: payload[0],
+        timestamp_offset_seconds: read_u32_le(payload, 1)?,
+        uptime_seconds: read_u32_le(payload, 5)?,
+        base_timestamp_seconds: read_u32_le(payload, 9)?,
+        unknown_status: [payload[13], payload[14], payload[15]],
+        reserved: payload[16..].to_vec(),
+    })
 }
 
 pub fn build_time_response(packet: &Packet) -> Vec<u8> {
@@ -339,7 +369,7 @@ mod tests {
 
     #[test]
     fn parses_packet_and_builds_time_response() {
-        let packet = packet_with_payload(&[0x08, 0x01]);
+        let packet = packet_with_type(0x41, &[0x08, 0x01]);
         let parsed = parse_packet(&packet).expect("packet parses");
         let response = build_time_response(&parsed);
 
@@ -353,20 +383,123 @@ mod tests {
     }
 
     #[test]
+    fn maps_known_request_types() {
+        assert_eq!(RequestType::from_byte(0x41), RequestType::Handshake);
+        assert_eq!(RequestType::from_byte(0x42), RequestType::Data);
+        assert_eq!(RequestType::from_byte(0x43), RequestType::Wifi);
+        assert_eq!(RequestType::from_byte(0x47), RequestType::Heartbeat);
+        assert_eq!(RequestType::from_byte(0x48), RequestType::Report);
+        assert_eq!(RequestType::from_byte(0xff), RequestType::Unknown(0xff));
+    }
+
+    #[test]
+    fn parses_logger_payload_from_handshake_frame() {
+        let mut payload = vec![0u8; 210];
+        write_ascii(&mut payload, 19, "MW3_16U_5406_1.53");
+        write_ascii(&mut payload, 65, "192.0.2.15");
+        write_ascii(&mut payload, 89, "V1.1.00.0F");
+        write_ascii(&mut payload, 172, "test-ssid");
+
+        let packet = parse_packet(&packet_with_type(0x41, &payload)).expect("packet parses");
+        let parsed = parse_logger_payload(&packet).expect("logger payload parses");
+
+        assert_eq!(parsed.fw_ver, "MW3_16U_5406_1.53");
+        assert_eq!(parsed.ip, "192.0.2.15");
+        assert_eq!(parsed.ver, "V1.1.00.0F");
+        assert_eq!(parsed.ssid, "test-ssid");
+    }
+
+    #[test]
+    fn parses_microinverter_data_payload() {
+        let mut payload = vec![0u8; 251];
+        payload[0] = 0x01;
+        payload[1] = 0x08;
+
+        write_u32_le(&mut payload, 33, 456);
+        write_u32_le(&mut payload, 37, 789);
+        write_u16_le(&mut payload, 45, 2305);
+        write_u16_le(&mut payload, 57, 5001);
+        write_u32_le(&mut payload, 59, 123);
+        write_i16_le(&mut payload, 63, 2800);
+
+        write_u16_le(&mut payload, 85, 312);
+        write_u16_le(&mut payload, 87, 2);
+        write_u16_le(&mut payload, 89, 321);
+        write_u16_le(&mut payload, 91, 10);
+        write_u16_le(&mut payload, 136, 16);
+        write_u16_le(&mut payload, 138, 19);
+        write_u16_be(&mut payload, 145, 8019);
+        write_u16_be(&mut payload, 149, 8741);
+        payload[131] = 2;
+
+        let packet = parse_packet(&packet_with_type(0x42, &payload)).expect("packet parses");
+        let parsed = parse_data_payload(&packet)
+            .expect("data payload parses")
+            .expect("microinverter payload");
+
+        assert_eq!(parsed.inverter_meta.mppt_count, 2);
+        assert_eq!(parsed.grid.active_power_w, 123);
+        assert_close(parsed.grid.kwh_today, 4.56);
+        assert_close(parsed.grid.kwh_total, 78.9);
+        assert_close(parsed.grid.v, 230.5);
+        assert_close(parsed.grid.hz, 50.01);
+        assert_close(parsed.inverter.radiator_temp_celsius, 28.0);
+        assert_close(parsed.pv[0].v, 31.2);
+        assert_close(parsed.pv[0].i, 0.2);
+        assert_close(parsed.pv[0].w, 6.24);
+        assert_close(parsed.pv[0].kwh_today, 1.6);
+        assert_close(parsed.pv[0].kwh_total, 801.9);
+        assert_close(parsed.pv[1].v, 32.1);
+        assert_close(parsed.pv[1].i, 1.0);
+        assert_close(parsed.pv[1].w, 32.1);
+        assert_close(parsed.pv[1].kwh_today, 1.9);
+        assert_close(parsed.pv[1].kwh_total, 874.1);
+    }
+
+    #[test]
+    fn parses_report_payload_and_keeps_time_response_shape() {
+        let mut payload = vec![0xff; 60];
+        payload[0] = 0x01;
+        write_u32_le(&mut payload, 1, 1000);
+        write_u32_le(&mut payload, 5, 42);
+        write_u32_le(&mut payload, 9, 1_700_000_000);
+        payload[13..16].copy_from_slice(&[0x01, 0x05, 0x2c]);
+
+        let packet = parse_packet(&packet_with_type(0x48, &payload)).expect("packet parses");
+        let parsed = parse_report_payload(&packet).expect("report payload parses");
+        let response = build_time_response(&packet);
+
+        assert_eq!(
+            RequestType::from_byte(packet.header.msg_type),
+            RequestType::Report
+        );
+        assert_eq!(parsed.version, 1);
+        assert_eq!(parsed.timestamp_offset_seconds, 1000);
+        assert_eq!(parsed.uptime_seconds, 42);
+        assert_eq!(parsed.base_timestamp_seconds, 1_700_000_000);
+        assert_eq!(parsed.reconstructed_timestamp_seconds(), 1_700_001_000);
+        assert_eq!(parsed.unknown_status, [0x01, 0x05, 0x2c]);
+        assert!(parsed.reserved.iter().all(|byte| *byte == 0xff));
+        assert_eq!(response[4], 0x18);
+        assert_eq!(response[11], 0x01);
+        assert_eq!(response[21], checksum(&response));
+    }
+
+    #[test]
     fn rejects_wrong_footer_magic() {
-        let mut packet = packet_with_payload(&[0x08, 0x01]);
+        let mut packet = packet_with_type(0x41, &[0x08, 0x01]);
         let last = packet.len() - 1;
         packet[last] = 0xff;
 
         assert!(parse_packet(&packet).is_err());
     }
 
-    fn packet_with_payload(payload: &[u8]) -> Vec<u8> {
+    fn packet_with_type(msg_type: u8, payload: &[u8]) -> Vec<u8> {
         let mut packet = vec![0u8; HEADER_LEN + payload.len() + FOOTER_LEN];
         packet[0] = 0xa5;
         write_u16_le(&mut packet, 1, payload.len() as u16);
         packet[3] = 0x00;
-        packet[4] = 0x41;
+        packet[4] = msg_type;
         packet[5] = 0x02;
         packet[6] = 0x03;
         write_u32_le(&mut packet, 7, 1234567890);
@@ -376,5 +509,25 @@ mod tests {
         let magic_index = packet.len() - 1;
         packet[magic_index] = 0x15;
         packet
+    }
+
+    fn write_ascii(buf: &mut [u8], offset: usize, value: &str) {
+        let bytes = value.as_bytes();
+        buf[offset..offset + bytes.len()].copy_from_slice(bytes);
+    }
+
+    fn write_i16_le(buf: &mut [u8], offset: usize, value: i16) {
+        buf[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
+    }
+
+    fn write_u16_be(buf: &mut [u8], offset: usize, value: u16) {
+        buf[offset..offset + 2].copy_from_slice(&value.to_be_bytes());
+    }
+
+    fn assert_close(actual: f64, expected: f64) {
+        assert!(
+            (actual - expected).abs() < 0.001,
+            "expected {expected}, got {actual}"
+        );
     }
 }

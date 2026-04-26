@@ -218,6 +218,26 @@ It will also autoconfigure entities for home assistant.
 It is however a bit more complicated than the polling approaches, as it requires you to understand how networks work
 and how to deploy a service somewhere. Nothing too arcane of course but if you don't know anything about linux, you might want to pass on this.
 
+#### Observed dummycloud packet flow
+
+In local captures, the logger connects to the dummycloud TCP endpoint and usually sends this Solarman V5 packet sequence:
+
+| Type | Name | Observed role |
+|------|------|---------------|
+| `0x41` | `HANDSHAKE` | Logger metadata such as firmware version, local IP, hardware/software revision, and Wi-Fi SSID. |
+| `0x42` | `DATA` | Microinverter telemetry. The dummycloud currently uses this for PV voltage/current/power, daily and total energy, grid values, radiator temperature, MPPT count, and MQTT discovery. |
+| `0x43` | `WIFI` | Periodic Wi-Fi/logger status packets. In the observed firmware these mostly repeat SSID/status-like information. |
+| `0x48` | `REPORT` | Short logger report packet. [pysolarmanv5](https://pysolarmanv5.readthedocs.io/) also names this Solarman V5 type `REPORT`. |
+| `0x47` | `HEARTBEAT` | Keepalive packet. |
+
+The dummycloud answers these packet types with the same time-response frame shape, using response type `request_type - 0x30`.
+
+The observed `REPORT` payload is 60 bytes. It does not appear to contain inverter energy telemetry. The useful fields seen
+so far are a payload version byte, an uptime-like counter that resets after logger reboot, a base timestamp plus offset
+which reconstructs the packet time, and three status bytes that were stable in the captures. The remaining 44 bytes were
+filled with `0xff`, so they currently look reserved or empty. This makes `REPORT` useful for logger liveness, clock sanity
+checks, and reboot detection, but not for additional PV/grid measurements at this point.
+
 #### Installing the Home Assistant app on HAOS
 
 On Home Assistant OS, the dummycloud can be installed as an app from this repository. Prebuilt app images are available
