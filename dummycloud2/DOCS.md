@@ -38,15 +38,15 @@ Prebuilt app images are published for `aarch64`/`arm64` and `amd64`.
 The Rust service can also be built and run directly on macOS for local testing. The published Home Assistant app images
 target Linux `amd64` and `arm64`.
 
-Published GHCR image sizes after the v2.0.1 build:
+Published GHCR image sizes after the v2.0.2 build:
 
 | Image | `linux/amd64` | `linux/arm64` |
 | --- | ---: | ---: |
 | `ghcr.io/chrisunderscorek/deye-dummycloud-ha:1.1.5` | 38.4 MiB | 37.6 MiB |
-| `ghcr.io/chrisunderscorek/deye-dummycloud2-ha:2.0.1` | 21.4 MiB | 21.8 MiB |
+| `ghcr.io/chrisunderscorek/deye-dummycloud2-ha:2.0.2` | 21.8 MiB | 22.3 MiB |
 
 The GHCR values are the compressed config and layer sizes reported by the OCI manifests. Local macOS/Colima builds of
-v2.0.1 reported 21.8 MiB for `linux/amd64` and 22.2 MiB for `linux/arm64` via `docker image inspect`.
+v2.0.2 reported 22.2 MiB for `linux/amd64` via `docker image inspect`.
 
 ## Networking
 
