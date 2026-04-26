@@ -183,8 +183,8 @@ async fn process_packet(
         RequestType::Handshake => match parse_logger_payload(&packet) {
             Ok(payload) => {
                 debug!(
-                    "Handshake packet data from {remote_address}: fw_ver={}, ip={}, ver={}, ssid={}",
-                    payload.fw_ver, payload.ip, payload.ver, payload.ssid
+                    "Handshake packet data from {remote_address}: fw_ver={}, mac={:?}, ip={}, ver={}, ssid={}",
+                    payload.fw_ver, payload.mac, payload.ip, payload.ver, payload.ssid
                 );
 
                 let ssid = payload.ssid.trim();
@@ -193,7 +193,7 @@ async fn process_packet(
                 }
 
                 if let Err(err) = publisher
-                    .handle_logger(packet.header.logger_serial, &payload)
+                    .handle_logger(remote_address, packet.header.logger_serial, &payload)
                     .await
                 {
                     error!("Failed to publish logger packet from {remote_address}: {err:#}");

@@ -245,7 +245,9 @@ link/status flag. The dummycloud only publishes the signal value from the newest
 the SSID from the preceding handshake, so older cached status records do not overwrite the live value.
 
 The Home Assistant MQTT discovery now includes diagnostic entities for the logger Wi-Fi SSID, Wi-Fi signal, uptime at the
-latest report, report time, and derived last reboot time. The captures did not show a plaintext Wi-Fi password.
+latest report, report time, derived last reboot time, serial number, IP address, MAC address, firmware version, and
+hardware version. The MQTT device payload also includes the logger serial number, firmware/hardware versions, and the
+MAC address advertised in the handshake when available. The captures did not show a plaintext Wi-Fi password.
 Keep raw stream dumps out of git because they may still contain local network identifiers.
 
 #### Installing the Home Assistant app on HAOS

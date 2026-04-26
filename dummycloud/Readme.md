@@ -35,6 +35,11 @@ Besides PV, grid, and inverter telemetry, dummycloud publishes Home Assistant di
 
 - `logger/wifi_ssid`
 - `logger/wifi_signal`
+- `logger/serial_number`
+- `logger/ip_address`
+- `logger/mac_address`
+- `logger/firmware_version`
+- `logger/hardware_version`
 - `logger/uptime_seconds`
 - `logger/report_time`
 - `logger/last_reboot`
@@ -42,6 +47,9 @@ Besides PV, grid, and inverter telemetry, dummycloud publishes Home Assistant di
 The Wi-Fi signal value is derived from observed `0x43` WIFI packets, matches the signal quality from the Deye web UI,
 and is published only when the status text matches the SSID from the logger handshake. The last reboot time is derived
 from the observed `0x48` REPORT packet timestamp minus the report uptime counter.
+
+The Home Assistant MQTT device payload includes the logger serial number, firmware/hardware versions, and the MAC address
+advertised in the handshake when available. The device name remains `Deye Microinverter <logger serial>`.
 
 ## Home Assistant OS Deployment
 

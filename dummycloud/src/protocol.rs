@@ -22,6 +22,7 @@ pub struct Packet {
 #[derive(Debug, Clone)]
 pub struct LoggerPayload {
     pub fw_ver: String,
+    pub mac: Option<String>,
     pub ip: String,
     pub ver: String,
     pub ssid: String,
@@ -168,6 +169,7 @@ pub fn parse_logger_payload(packet: &Packet) -> Result<LoggerPayload> {
 
     Ok(LoggerPayload {
         fw_ver: ascii_until_null(&payload[19..60]),
+        mac: format_mac_address(&payload[59..65]),
         ip: ascii_until_null(&payload[65..82]),
         ver: ascii_until_null(&payload[89..130]),
         ssid: ascii_until_null(&payload[172..210]),
@@ -372,6 +374,19 @@ fn ascii_until_null(buf: &[u8]) -> String {
     String::from_utf8_lossy(&buf[..end]).to_string()
 }
 
+fn format_mac_address(buf: &[u8]) -> Option<String> {
+    if buf.len() != 6 || buf.iter().all(|byte| *byte == 0) || buf.iter().all(|byte| *byte == 0xff) {
+        return None;
+    }
+
+    Some(
+        buf.iter()
+            .map(|byte| format!("{byte:02X}"))
+            .collect::<Vec<_>>()
+            .join(":"),
+    )
+}
+
 fn read_u16_le(buf: &[u8], offset: usize) -> Result<u16> {
     let bytes = buf
         .get(offset..offset + 2)
@@ -441,6 +456,7 @@ mod tests {
     fn parses_logger_payload_from_handshake_frame() {
         let mut payload = vec![0u8; 210];
         write_ascii(&mut payload, 19, "MW3_16U_5406_1.53");
+        payload[59..65].copy_from_slice(&[0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff]);
         write_ascii(&mut payload, 65, "192.0.2.15");
         write_ascii(&mut payload, 89, "V1.1.00.0F");
         write_ascii(&mut payload, 172, "test-ssid");
@@ -449,9 +465,21 @@ mod tests {
         let parsed = parse_logger_payload(&packet).expect("logger payload parses");
 
         assert_eq!(parsed.fw_ver, "MW3_16U_5406_1.53");
+        assert_eq!(parsed.mac.as_deref(), Some("AA:BB:CC:DD:EE:FF"));
         assert_eq!(parsed.ip, "192.0.2.15");
         assert_eq!(parsed.ver, "V1.1.00.0F");
         assert_eq!(parsed.ssid, "test-ssid");
+    }
+
+    #[test]
+    fn ignores_empty_logger_mac_address() {
+        let mut payload = vec![0u8; 210];
+        write_ascii(&mut payload, 19, "MW3_16U_5406_1.53");
+
+        let packet = parse_packet(&packet_with_type(0x41, &payload)).expect("packet parses");
+        let parsed = parse_logger_payload(&packet).expect("logger payload parses");
+
+        assert_eq!(parsed.mac, None);
     }
 
     #[test]

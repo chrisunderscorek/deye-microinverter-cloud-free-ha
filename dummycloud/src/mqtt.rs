@@ -15,9 +15,31 @@ use crate::protocol::{DataPayload, LoggerPayload, ReportPayload, WifiPayload};
 const TOPIC_PREFIX: &str = "deye-dummycloud";
 const AUTOCONF_INTERVAL: Duration = Duration::from_secs(4 * 60 * 60);
 
+#[derive(Debug, Clone, Default)]
+struct LoggerMetadata {
+    ip_address: Option<String>,
+    mac_address: Option<String>,
+    firmware_version: Option<String>,
+    hardware_version: Option<String>,
+    wifi_ssid: Option<String>,
+}
+
+impl LoggerMetadata {
+    fn from_handshake(remote_address: &str, logger: &LoggerPayload) -> Self {
+        Self {
+            ip_address: non_empty(&logger.ip).or_else(|| non_empty(remote_address)),
+            mac_address: logger.mac.clone(),
+            firmware_version: non_empty(&logger.fw_ver),
+            hardware_version: non_empty(&logger.ver),
+            wifi_ssid: non_empty(&logger.ssid),
+        }
+    }
+}
+
 pub struct MqttPublisher {
     client: AsyncClient,
     autoconf_timestamps: Mutex<HashMap<String, Instant>>,
+    logger_metadata: Mutex<HashMap<String, LoggerMetadata>>,
 }
 
 impl MqttPublisher {
@@ -82,6 +104,7 @@ impl MqttPublisher {
         Ok(Self {
             client,
             autoconf_timestamps: Mutex::new(HashMap::new()),
+            logger_metadata: Mutex::new(HashMap::new()),
         })
     }
 
@@ -179,19 +202,70 @@ impl MqttPublisher {
         Ok(())
     }
 
-    pub async fn handle_logger(&self, logger_serial: u32, logger: &LoggerPayload) -> Result<()> {
-        let ssid = logger.ssid.trim();
-        if ssid.is_empty() {
-            return Ok(());
+    pub async fn handle_logger(
+        &self,
+        remote_address: &str,
+        logger_serial: u32,
+        logger: &LoggerPayload,
+    ) -> Result<()> {
+        let serial = logger_serial.to_string();
+        let metadata = LoggerMetadata::from_handshake(remote_address, logger);
+
+        {
+            let mut logger_metadata = self.logger_metadata.lock().await;
+            logger_metadata.insert(serial.clone(), metadata.clone());
         }
 
-        let base_topic = format!("{TOPIC_PREFIX}/{logger_serial}");
+        let base_topic = format!("{TOPIC_PREFIX}/{serial}");
         self.publish(
-            format!("{base_topic}/logger/wifi_ssid"),
-            ssid.to_owned(),
+            format!("{base_topic}/logger/serial_number"),
+            serial.clone(),
             true,
         )
-        .await
+        .await?;
+
+        if let Some(ip_address) = metadata.ip_address.as_deref() {
+            self.publish(
+                format!("{base_topic}/logger/ip_address"),
+                ip_address.to_owned(),
+                true,
+            )
+            .await?;
+        }
+        if let Some(mac_address) = metadata.mac_address.as_deref() {
+            self.publish(
+                format!("{base_topic}/logger/mac_address"),
+                mac_address.to_owned(),
+                true,
+            )
+            .await?;
+        }
+        if let Some(firmware_version) = metadata.firmware_version.as_deref() {
+            self.publish(
+                format!("{base_topic}/logger/firmware_version"),
+                firmware_version.to_owned(),
+                true,
+            )
+            .await?;
+        }
+        if let Some(hardware_version) = metadata.hardware_version.as_deref() {
+            self.publish(
+                format!("{base_topic}/logger/hardware_version"),
+                hardware_version.to_owned(),
+                true,
+            )
+            .await?;
+        }
+        if let Some(wifi_ssid) = metadata.wifi_ssid.as_deref() {
+            self.publish(
+                format!("{base_topic}/logger/wifi_ssid"),
+                wifi_ssid.to_owned(),
+                true,
+            )
+            .await?;
+        }
+
+        Ok(())
     }
 
     pub async fn handle_report(&self, logger_serial: u32, report: &ReportPayload) -> Result<()> {
@@ -274,15 +348,11 @@ impl MqttPublisher {
         }
 
         let base_topic = format!("{TOPIC_PREFIX}/{logger_serial}");
-        let device = json!({
-            "manufacturer": "Deye",
-            "model": "Microinverter",
-            "name": format!("Deye Microinverter {logger_serial}"),
-            "configuration_url": format!("http://{remote_address}/index_cn.html"),
-            "identifiers": [
-                format!("deye_dummycloud_{logger_serial}")
-            ]
-        });
+        let logger_metadata = {
+            let logger_metadata = self.logger_metadata.lock().await;
+            logger_metadata.get(logger_serial).cloned()
+        };
+        let device = device_payload(logger_serial, remote_address, logger_metadata.as_ref());
 
         for i in 1..=mppt_count {
             self.publish_json(
@@ -521,6 +591,76 @@ impl MqttPublisher {
         .await?;
 
         self.publish_json(
+            format!("homeassistant/text_sensor/deye_dummycloud_{logger_serial}/{logger_serial}_logger_serial_number/config"),
+            text_sensor_payload(
+                &base_topic,
+                "logger/serial_number",
+                "Logger Serial Number",
+                &format!("deye_dummycloud_{logger_serial}_logger_serial_number"),
+                Some("diagnostic"),
+                Some("mdi:barcode"),
+                &device,
+            ),
+            true,
+        )
+        .await?;
+        self.publish_json(
+            format!("homeassistant/text_sensor/deye_dummycloud_{logger_serial}/{logger_serial}_logger_ip_address/config"),
+            text_sensor_payload(
+                &base_topic,
+                "logger/ip_address",
+                "Logger IP Address",
+                &format!("deye_dummycloud_{logger_serial}_logger_ip_address"),
+                Some("diagnostic"),
+                Some("mdi:ip-network"),
+                &device,
+            ),
+            true,
+        )
+        .await?;
+        self.publish_json(
+            format!("homeassistant/text_sensor/deye_dummycloud_{logger_serial}/{logger_serial}_logger_mac_address/config"),
+            text_sensor_payload(
+                &base_topic,
+                "logger/mac_address",
+                "Logger MAC Address",
+                &format!("deye_dummycloud_{logger_serial}_logger_mac_address"),
+                Some("diagnostic"),
+                Some("mdi:network-outline"),
+                &device,
+            ),
+            true,
+        )
+        .await?;
+        self.publish_json(
+            format!("homeassistant/text_sensor/deye_dummycloud_{logger_serial}/{logger_serial}_logger_firmware_version/config"),
+            text_sensor_payload(
+                &base_topic,
+                "logger/firmware_version",
+                "Logger Firmware Version",
+                &format!("deye_dummycloud_{logger_serial}_logger_firmware_version"),
+                Some("diagnostic"),
+                Some("mdi:chip"),
+                &device,
+            ),
+            true,
+        )
+        .await?;
+        self.publish_json(
+            format!("homeassistant/text_sensor/deye_dummycloud_{logger_serial}/{logger_serial}_logger_hardware_version/config"),
+            text_sensor_payload(
+                &base_topic,
+                "logger/hardware_version",
+                "Logger Hardware Version",
+                &format!("deye_dummycloud_{logger_serial}_logger_hardware_version"),
+                Some("diagnostic"),
+                Some("mdi:developer-board"),
+                &device,
+            ),
+            true,
+        )
+        .await?;
+        self.publish_json(
             format!("homeassistant/sensor/deye_dummycloud_{logger_serial}/{logger_serial}_logger_uptime_seconds/config"),
             sensor_payload(
                 &base_topic,
@@ -630,6 +770,41 @@ impl MqttPublisher {
     }
 }
 
+fn device_payload(
+    logger_serial: &str,
+    remote_address: &str,
+    metadata: Option<&LoggerMetadata>,
+) -> Value {
+    let mut payload = json!({
+        "manufacturer": "Deye",
+        "model": "Microinverter",
+        "name": format!("Deye Microinverter {logger_serial}"),
+        "configuration_url": format!("http://{remote_address}/index_cn.html"),
+        "identifiers": [
+            format!("deye_dummycloud_{logger_serial}")
+        ],
+        "serial_number": logger_serial,
+    });
+
+    let object = payload
+        .as_object_mut()
+        .expect("device payload is an object");
+
+    if let Some(metadata) = metadata {
+        if let Some(firmware_version) = metadata.firmware_version.as_deref() {
+            object.insert("sw_version".to_owned(), json!(firmware_version));
+        }
+        if let Some(hardware_version) = metadata.hardware_version.as_deref() {
+            object.insert("hw_version".to_owned(), json!(hardware_version));
+        }
+        if let Some(mac_address) = metadata.mac_address.as_deref() {
+            object.insert("connections".to_owned(), json!([["mac", mac_address]]));
+        }
+    }
+
+    payload
+}
+
 #[allow(clippy::too_many_arguments)]
 fn sensor_payload(
     base_topic: &str,
@@ -720,6 +895,15 @@ fn number(value: f64) -> String {
     value.to_string()
 }
 
+fn non_empty(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_owned())
+    }
+}
+
 fn unix_epoch_to_utc_iso8601(seconds: u64) -> String {
     let days = (seconds / 86_400) as i64;
     let seconds_of_day = seconds % 86_400;
@@ -779,6 +963,28 @@ mod tests {
         assert_eq!(payload["entity_category"], "diagnostic");
         assert_eq!(payload["icon"], "mdi:wifi-settings");
         assert_eq!(payload["unique_id"], "deye_dummycloud_123_logger_wifi_ssid");
+    }
+
+    #[test]
+    fn adds_logger_metadata_to_device_payload() {
+        let metadata = LoggerMetadata {
+            ip_address: Some("192.0.2.15".to_owned()),
+            mac_address: Some("AA:BB:CC:DD:EE:FF".to_owned()),
+            firmware_version: Some("MW3_16U_5406_1.53".to_owned()),
+            hardware_version: Some("V1.1.00.0F".to_owned()),
+            wifi_ssid: Some("test-net".to_owned()),
+        };
+        let payload = device_payload("1234567890", "192.0.2.15", Some(&metadata));
+
+        assert_eq!(payload["serial_number"], "1234567890");
+        assert_eq!(
+            payload["configuration_url"],
+            "http://192.0.2.15/index_cn.html"
+        );
+        assert_eq!(payload["sw_version"], "MW3_16U_5406_1.53");
+        assert_eq!(payload["hw_version"], "V1.1.00.0F");
+        assert_eq!(payload["connections"][0][0], "mac");
+        assert_eq!(payload["connections"][0][1], "AA:BB:CC:DD:EE:FF");
     }
 
     #[test]
