@@ -39,9 +39,9 @@ Besides PV, grid, and inverter telemetry, dummycloud publishes Home Assistant di
 - `logger/report_time`
 - `logger/last_reboot`
 
-The Wi-Fi signal value is derived from observed `0x43` WIFI packets and is published only when the status text matches
-the SSID from the logger handshake. The last reboot time is derived from the observed `0x48` REPORT packet timestamp
-minus the report uptime counter.
+The Wi-Fi signal value is derived from observed `0x43` WIFI packets, matches the signal quality from the Deye web UI,
+and is published only when the status text matches the SSID from the logger handshake. The last reboot time is derived
+from the observed `0x48` REPORT packet timestamp minus the report uptime counter.
 
 ## Home Assistant OS Deployment
 

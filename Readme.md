@@ -240,8 +240,9 @@ checks, and reboot detection, but not for additional PV/grid measurements at thi
 
 The observed `WIFI` payload is 47 bytes. Bytes `15..45` contain a zero-padded text field. In the captures this was either
 the configured Wi-Fi SSID or another short logger status token. Byte `45` behaved like Wi-Fi signal quality in percent
-and byte `46` like a link/status flag. The dummycloud only publishes the signal value from the newest WIFI record whose
-text field matches the SSID from the preceding handshake, so older cached status records do not overwrite the live value.
+and matches the signal quality shown by the Deye web UI within the observed polling jitter. Byte `46` behaved like a
+link/status flag. The dummycloud only publishes the signal value from the newest WIFI record whose text field matches
+the SSID from the preceding handshake, so older cached status records do not overwrite the live value.
 
 The Home Assistant MQTT discovery now includes diagnostic entities for the logger Wi-Fi SSID, Wi-Fi signal, uptime at the
 latest report, report time, and derived last reboot time. The captures did not show a plaintext Wi-Fi password.
