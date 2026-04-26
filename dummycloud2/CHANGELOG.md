@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.1
+
+- Enable the custom AppArmor profile explicitly in the Home Assistant app metadata.
+
 ## 2.0.0
 
 - Initial Home Assistant OS app package for Deye Dummycloud v2.
