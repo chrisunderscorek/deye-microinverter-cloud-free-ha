@@ -1,5 +1,9 @@
 # Deye Microinverter - Cloud-free
 
+[![Builder](https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha/actions/workflows/builder.yaml/badge.svg?branch=master)](https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha/actions/workflows/builder.yaml)
+[![GHCR image](https://img.shields.io/badge/GHCR-deye--dummycloud--ha-2496ED?logo=docker&logoColor=white)](https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha/pkgs/container/deye-dummycloud-ha)
+[![Platforms](https://img.shields.io/badge/platform-linux%2Famd64%20%7C%20linux%2Farm64-2496ED?logo=linux&logoColor=white)](https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha/pkgs/container/deye-dummycloud-ha)
+
 ![Deye microinverter in the sun](img/banner.jpg)
 
 Solar power generation work best if there are no clouds anywhere to be seen :)
@@ -15,7 +19,7 @@ You also won't have to share any e-mail address or phone number.
 
 This fork also packages [dummycloud](./dummycloud) as a Home Assistant OS app. The intention is to make the local Deye
 cloud replacement installable from the Home Assistant `Settings` -> `Apps` UI, with MQTT settings configurable in the
-Home Assistant interface and a prebuilt image published on GHCR. Images are built for `aarch64`/`arm64` and `amd64`.
+Home Assistant interface and a prebuilt image published on GHCR.
 
 Add this repository as a Home Assistant app repository:
 
@@ -51,7 +55,6 @@ Here are the main things you will want to know about these microinverters:
 - They can be monitored and controlled via their local ModbusTCP interface
 - You can also completely replace the cloud with a local implementation: [dummycloud](./dummycloud)
 - On Home Assistant OS, [dummycloud](./dummycloud) can be installed as the `Deye Dummycloud` app from this repository
-  with prebuilt images for `aarch64`/`arm64` and `amd64`
 
 **2024-08-20 Update**
 
