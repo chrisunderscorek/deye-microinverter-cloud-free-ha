@@ -13,7 +13,7 @@ use crate::config::StreamDumpConfig;
 use crate::mqtt::MqttPublisher;
 use crate::protocol::{
     PORT, RequestType, build_time_response, packet_total_len, parse_data_payload,
-    parse_logger_payload, parse_packet, parse_report_payload,
+    parse_logger_payload, parse_packet, parse_report_payload, parse_wifi_payload,
 };
 
 const MAX_PACKET_LEN: usize = 4096;
@@ -63,6 +63,7 @@ async fn handle_connection(
     let mut read_buf = [0u8; 2048];
     let mut pending = Vec::new();
     let mut dumper = StreamDumper::open(stream_dump.as_deref(), peer_addr).await;
+    let mut state = ConnectionState::default();
 
     loop {
         let bytes_read = socket.read(&mut read_buf).await?;
@@ -90,6 +91,7 @@ async fn handle_connection(
             &remote_address,
             &publisher,
             &mut dumper,
+            &mut state,
         )
         .await?;
     }
@@ -101,6 +103,7 @@ async fn process_pending_packets(
     remote_address: &str,
     publisher: &MqttPublisher,
     dumper: &mut Option<StreamDumper>,
+    state: &mut ConnectionState,
 ) -> Result<()> {
     loop {
         let Some(total_len) = next_packet_len(pending) else {
@@ -112,7 +115,15 @@ async fn process_pending_packets(
         }
 
         let packet_bytes = pending.drain(..total_len).collect::<Vec<_>>();
-        process_packet(&packet_bytes, socket, remote_address, publisher, dumper).await?;
+        process_packet(
+            &packet_bytes,
+            socket,
+            remote_address,
+            publisher,
+            dumper,
+            state,
+        )
+        .await?;
     }
 }
 
@@ -141,6 +152,7 @@ async fn process_packet(
     remote_address: &str,
     publisher: &MqttPublisher,
     dumper: &mut Option<StreamDumper>,
+    state: &mut ConnectionState,
 ) -> Result<()> {
     let packet = match parse_packet(packet_bytes) {
         Ok(packet) => packet,
@@ -169,10 +181,24 @@ async fn process_packet(
 
     match request_type {
         RequestType::Handshake => match parse_logger_payload(&packet) {
-            Ok(payload) => debug!(
-                "Handshake packet data from {remote_address}: fw_ver={}, ip={}, ver={}, ssid={}",
-                payload.fw_ver, payload.ip, payload.ver, payload.ssid
-            ),
+            Ok(payload) => {
+                debug!(
+                    "Handshake packet data from {remote_address}: fw_ver={}, ip={}, ver={}, ssid={}",
+                    payload.fw_ver, payload.ip, payload.ver, payload.ssid
+                );
+
+                let ssid = payload.ssid.trim();
+                if !ssid.is_empty() {
+                    state.ssid = Some(ssid.to_owned());
+                }
+
+                if let Err(err) = publisher
+                    .handle_logger(packet.header.logger_serial, &payload)
+                    .await
+                {
+                    error!("Failed to publish logger packet from {remote_address}: {err:#}");
+                }
+            }
             Err(err) => debug!("Could not parse handshake payload from {remote_address}: {err:#}"),
         },
         RequestType::Data => match parse_data_payload(&packet) {
@@ -192,17 +218,58 @@ async fn process_packet(
             }
         },
         RequestType::Report => match parse_report_payload(&packet) {
-            Ok(payload) => debug!(
-                "REPORT packet data from {remote_address}: version={}, uptime_seconds={}, reconstructed_timestamp_seconds={}, status={:02x?}, reserved_bytes={}",
-                payload.version,
-                payload.uptime_seconds,
-                payload.reconstructed_timestamp_seconds(),
-                payload.unknown_status,
-                payload.reserved.len()
-            ),
+            Ok(payload) => {
+                debug!(
+                    "REPORT packet data from {remote_address}: version={}, uptime_seconds={}, reconstructed_timestamp_seconds={}, status={:02x?}, reserved_bytes={}",
+                    payload.version,
+                    payload.uptime_seconds,
+                    payload.reconstructed_timestamp_seconds(),
+                    payload.unknown_status,
+                    payload.reserved.len()
+                );
+
+                if let Err(err) = publisher
+                    .handle_report(packet.header.logger_serial, &payload)
+                    .await
+                {
+                    error!("Failed to publish REPORT packet from {remote_address}: {err:#}");
+                }
+            }
             Err(err) => debug!("Could not parse REPORT payload from {remote_address}: {err:#}"),
         },
-        RequestType::Wifi | RequestType::Heartbeat | RequestType::Unknown(_) => {}
+        RequestType::Wifi => match parse_wifi_payload(&packet) {
+            Ok(payload) => {
+                debug!(
+                    "WIFI packet data from {remote_address}: uptime_seconds={}, text_value_len={}, signal_quality_percent={:?}, link_status={}, reconstructed_timestamp_seconds={:?}",
+                    payload.uptime_seconds,
+                    payload.text_value.len(),
+                    payload.signal_quality_percent,
+                    payload.link_status,
+                    payload.reconstructed_timestamp_seconds()
+                );
+
+                let is_latest_wifi_record = state
+                    .last_wifi_timestamp_offset
+                    .is_none_or(|last| payload.timestamp_offset_seconds >= last);
+
+                if is_latest_wifi_record {
+                    state.last_wifi_timestamp_offset = Some(payload.timestamp_offset_seconds);
+                    if let Err(err) = publisher
+                        .handle_wifi(packet.header.logger_serial, &payload, state.ssid.as_deref())
+                        .await
+                    {
+                        error!("Failed to publish WIFI packet from {remote_address}: {err:#}");
+                    }
+                } else {
+                    debug!(
+                        "Skipping older WIFI status record from {remote_address}: offset={} last_offset={:?}",
+                        payload.timestamp_offset_seconds, state.last_wifi_timestamp_offset
+                    );
+                }
+            }
+            Err(err) => debug!("Could not parse WIFI payload from {remote_address}: {err:#}"),
+        },
+        RequestType::Heartbeat | RequestType::Unknown(_) => {}
     }
 
     let response = build_time_response(&packet);
@@ -213,6 +280,12 @@ async fn process_packet(
     socket.write_all(&response).await?;
 
     Ok(())
+}
+
+#[derive(Default)]
+struct ConnectionState {
+    ssid: Option<String>,
+    last_wifi_timestamp_offset: Option<u32>,
 }
 
 struct StreamDumper {

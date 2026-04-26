@@ -10,7 +10,7 @@ use tokio::time::sleep;
 use url::Url;
 
 use crate::config::AppConfig;
-use crate::protocol::DataPayload;
+use crate::protocol::{DataPayload, LoggerPayload, ReportPayload, WifiPayload};
 
 const TOPIC_PREFIX: &str = "deye-dummycloud";
 const AUTOCONF_INTERVAL: Duration = Duration::from_secs(4 * 60 * 60);
@@ -177,6 +177,84 @@ impl MqttPublisher {
         .await?;
 
         Ok(())
+    }
+
+    pub async fn handle_logger(&self, logger_serial: u32, logger: &LoggerPayload) -> Result<()> {
+        let ssid = logger.ssid.trim();
+        if ssid.is_empty() {
+            return Ok(());
+        }
+
+        let base_topic = format!("{TOPIC_PREFIX}/{logger_serial}");
+        self.publish(
+            format!("{base_topic}/logger/wifi_ssid"),
+            ssid.to_owned(),
+            true,
+        )
+        .await
+    }
+
+    pub async fn handle_report(&self, logger_serial: u32, report: &ReportPayload) -> Result<()> {
+        let base_topic = format!("{TOPIC_PREFIX}/{logger_serial}");
+        let report_time = report.reconstructed_timestamp_seconds();
+
+        self.publish(
+            format!("{base_topic}/logger/uptime_seconds"),
+            report.uptime_seconds.to_string(),
+            true,
+        )
+        .await?;
+        self.publish(
+            format!("{base_topic}/logger/report_time"),
+            unix_epoch_to_utc_iso8601(report_time),
+            true,
+        )
+        .await?;
+
+        if report_time >= report.uptime_seconds as u64 {
+            let last_reboot = report_time - report.uptime_seconds as u64;
+            self.publish(
+                format!("{base_topic}/logger/last_reboot"),
+                unix_epoch_to_utc_iso8601(last_reboot),
+                true,
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn handle_wifi(
+        &self,
+        logger_serial: u32,
+        wifi: &WifiPayload,
+        expected_ssid: Option<&str>,
+    ) -> Result<()> {
+        let Some(expected_ssid) = expected_ssid else {
+            debug!("Skipping WIFI signal publish without a known SSID");
+            return Ok(());
+        };
+
+        if expected_ssid.is_empty() || wifi.text_value != expected_ssid {
+            debug!(
+                "Skipping WIFI signal publish for non-SSID status text with len {}",
+                wifi.text_value.len()
+            );
+            return Ok(());
+        }
+
+        let Some(signal_quality_percent) = wifi.signal_quality_percent else {
+            debug!("Skipping WIFI signal publish with out-of-range signal quality");
+            return Ok(());
+        };
+
+        let base_topic = format!("{TOPIC_PREFIX}/{logger_serial}");
+        self.publish(
+            format!("{base_topic}/logger/wifi_signal"),
+            signal_quality_percent.to_string(),
+            true,
+        )
+        .await
     }
 
     async fn ensure_autoconf(
@@ -442,6 +520,97 @@ impl MqttPublisher {
         )
         .await?;
 
+        self.publish_json(
+            format!("homeassistant/sensor/deye_dummycloud_{logger_serial}/{logger_serial}_logger_uptime_seconds/config"),
+            sensor_payload(
+                &base_topic,
+                "logger/uptime_seconds",
+                "Logger Uptime",
+                Some("s"),
+                Some("duration"),
+                Some("measurement"),
+                &format!("deye_dummycloud_{logger_serial}_logger_uptime_seconds"),
+                None,
+                None,
+                Some("diagnostic"),
+                Some("mdi:timer-outline"),
+                &device,
+            ),
+            true,
+        )
+        .await?;
+        self.publish_json(
+            format!("homeassistant/sensor/deye_dummycloud_{logger_serial}/{logger_serial}_logger_report_time/config"),
+            sensor_payload(
+                &base_topic,
+                "logger/report_time",
+                "Logger Report Time",
+                None,
+                Some("timestamp"),
+                None,
+                &format!("deye_dummycloud_{logger_serial}_logger_report_time"),
+                None,
+                None,
+                Some("diagnostic"),
+                Some("mdi:clock-outline"),
+                &device,
+            ),
+            true,
+        )
+        .await?;
+        self.publish_json(
+            format!("homeassistant/sensor/deye_dummycloud_{logger_serial}/{logger_serial}_logger_last_reboot/config"),
+            sensor_payload(
+                &base_topic,
+                "logger/last_reboot",
+                "Logger Last Reboot",
+                None,
+                Some("timestamp"),
+                None,
+                &format!("deye_dummycloud_{logger_serial}_logger_last_reboot"),
+                None,
+                None,
+                Some("diagnostic"),
+                Some("mdi:restart"),
+                &device,
+            ),
+            true,
+        )
+        .await?;
+        self.publish_json(
+            format!("homeassistant/sensor/deye_dummycloud_{logger_serial}/{logger_serial}_logger_wifi_signal/config"),
+            sensor_payload(
+                &base_topic,
+                "logger/wifi_signal",
+                "Logger WiFi Signal",
+                Some("%"),
+                None,
+                Some("measurement"),
+                &format!("deye_dummycloud_{logger_serial}_logger_wifi_signal"),
+                None,
+                None,
+                Some("diagnostic"),
+                Some("mdi:wifi"),
+                &device,
+            ),
+            true,
+        )
+        .await?;
+        self.publish_json(
+            format!("homeassistant/text_sensor/deye_dummycloud_{logger_serial}/{logger_serial}_logger_wifi_ssid/config"),
+            text_sensor_payload(
+                &base_topic,
+                "logger/wifi_ssid",
+                "Logger WiFi SSID",
+                &format!("deye_dummycloud_{logger_serial}_logger_wifi_ssid"),
+                Some("diagnostic"),
+                Some("mdi:wifi-settings"),
+                &device,
+            ),
+            true,
+        )
+        .await?;
+
         let mut timestamps = self.autoconf_timestamps.lock().await;
         timestamps.insert(logger_serial.to_owned(), now);
 
@@ -516,8 +685,66 @@ fn sensor_payload(
     payload
 }
 
+fn text_sensor_payload(
+    base_topic: &str,
+    topic_suffix: &str,
+    name: &str,
+    object_and_unique_id: &str,
+    entity_category: Option<&str>,
+    icon: Option<&str>,
+    device: &Value,
+) -> Value {
+    let mut payload = json!({
+        "state_topic": format!("{base_topic}/{topic_suffix}"),
+        "name": name,
+        "object_id": object_and_unique_id,
+        "unique_id": object_and_unique_id,
+        "device": device,
+    });
+
+    let object = payload
+        .as_object_mut()
+        .expect("text sensor payload is an object");
+
+    if let Some(entity_category) = entity_category {
+        object.insert("entity_category".to_owned(), json!(entity_category));
+    }
+    if let Some(icon) = icon {
+        object.insert("icon".to_owned(), json!(icon));
+    }
+
+    payload
+}
+
 fn number(value: f64) -> String {
     value.to_string()
+}
+
+fn unix_epoch_to_utc_iso8601(seconds: u64) -> String {
+    let days = (seconds / 86_400) as i64;
+    let seconds_of_day = seconds % 86_400;
+    let (year, month, day) = civil_from_unix_days(days);
+    let hour = seconds_of_day / 3_600;
+    let minute = (seconds_of_day % 3_600) / 60;
+    let second = seconds_of_day % 60;
+
+    format!("{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}Z")
+}
+
+fn civil_from_unix_days(days_since_unix_epoch: i64) -> (i32, u32, u32) {
+    let z = days_since_unix_epoch + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let day_of_era = z - era * 146_097;
+    let year_of_era =
+        (day_of_era - day_of_era / 1_460 + day_of_era / 36_524 - day_of_era / 146_096) / 365;
+    let year = year_of_era + era * 400;
+    let day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+    let month_index = (5 * day_of_year + 2) / 153;
+    let day = day_of_year - (153 * month_index + 2) / 5 + 1;
+    let month = month_index + if month_index < 10 { 3 } else { -9 };
+    let year = year + if month <= 2 { 1 } else { 0 };
+
+    (year as i32, month as u32, day as u32)
 }
 
 fn client_id() -> String {
@@ -526,4 +753,40 @@ fn client_id() -> String {
         .unwrap_or_default()
         .subsec_nanos();
     format!("deye_dummycloud_{:07x}", nanos & 0x0fff_ffff)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn creates_diagnostic_text_sensor_payload() {
+        let device = json!({"identifiers": ["deye_dummycloud_123"]});
+        let payload = text_sensor_payload(
+            "deye-dummycloud/123",
+            "logger/wifi_ssid",
+            "Logger WiFi SSID",
+            "deye_dummycloud_123_logger_wifi_ssid",
+            Some("diagnostic"),
+            Some("mdi:wifi-settings"),
+            &device,
+        );
+
+        assert_eq!(
+            payload["state_topic"],
+            "deye-dummycloud/123/logger/wifi_ssid"
+        );
+        assert_eq!(payload["entity_category"], "diagnostic");
+        assert_eq!(payload["icon"], "mdi:wifi-settings");
+        assert_eq!(payload["unique_id"], "deye_dummycloud_123_logger_wifi_ssid");
+    }
+
+    #[test]
+    fn formats_unix_epoch_as_utc_iso8601() {
+        assert_eq!(unix_epoch_to_utc_iso8601(0), "1970-01-01T00:00:00Z");
+        assert_eq!(
+            unix_epoch_to_utc_iso8601(1_700_000_000),
+            "2023-11-14T22:13:20Z"
+        );
+    }
 }

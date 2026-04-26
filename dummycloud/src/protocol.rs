@@ -79,6 +79,28 @@ impl ReportPayload {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct WifiPayload {
+    pub flags: u8,
+    pub timestamp_offset_seconds: u32,
+    pub uptime_seconds: u32,
+    pub base_timestamp_seconds: u32,
+    pub unknown_status: [u8; 2],
+    pub text_value: String,
+    pub signal_quality_percent: Option<u8>,
+    pub link_status: u8,
+}
+
+impl WifiPayload {
+    pub fn reconstructed_timestamp_seconds(&self) -> Option<u64> {
+        if self.base_timestamp_seconds == 0 {
+            return None;
+        }
+
+        Some(self.base_timestamp_seconds as u64 + self.timestamp_offset_seconds as u64)
+    }
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum RequestType {
     Handshake,
@@ -172,6 +194,29 @@ pub fn parse_report_payload(packet: &Packet) -> Result<ReportPayload> {
         base_timestamp_seconds: read_u32_le(payload, 9)?,
         unknown_status: [payload[13], payload[14], payload[15]],
         reserved: payload[16..].to_vec(),
+    })
+}
+
+pub fn parse_wifi_payload(packet: &Packet) -> Result<WifiPayload> {
+    let payload = &packet.payload;
+    require_len(payload, 47)?;
+
+    let signal_quality = payload[45];
+    let signal_quality_percent = if signal_quality <= 100 {
+        Some(signal_quality)
+    } else {
+        None
+    };
+
+    Ok(WifiPayload {
+        flags: payload[0],
+        timestamp_offset_seconds: read_u32_le(payload, 1)?,
+        uptime_seconds: read_u32_le(payload, 5)?,
+        base_timestamp_seconds: read_u32_le(payload, 9)?,
+        unknown_status: [payload[13], payload[14]],
+        text_value: ascii_until_null(&payload[15..45]),
+        signal_quality_percent,
+        link_status: payload[46],
     })
 }
 
@@ -454,6 +499,46 @@ mod tests {
         assert_close(parsed.pv[1].w, 32.1);
         assert_close(parsed.pv[1].kwh_today, 1.9);
         assert_close(parsed.pv[1].kwh_total, 874.1);
+    }
+
+    #[test]
+    fn parses_wifi_payload() {
+        let mut payload = vec![0u8; 47];
+        payload[0] = 0x81;
+        write_u32_le(&mut payload, 1, 1000);
+        write_u32_le(&mut payload, 5, 42);
+        write_u32_le(&mut payload, 9, 1_700_000_000);
+        payload[13..15].copy_from_slice(&[0x10, 0x00]);
+        write_ascii(&mut payload, 15, "test-net");
+        payload[45] = 70;
+        payload[46] = 1;
+
+        let packet = parse_packet(&packet_with_type(0x43, &payload)).expect("packet parses");
+        let parsed = parse_wifi_payload(&packet).expect("wifi payload parses");
+
+        assert_eq!(parsed.flags, 0x81);
+        assert_eq!(parsed.timestamp_offset_seconds, 1000);
+        assert_eq!(parsed.uptime_seconds, 42);
+        assert_eq!(parsed.base_timestamp_seconds, 1_700_000_000);
+        assert_eq!(
+            parsed.reconstructed_timestamp_seconds(),
+            Some(1_700_001_000)
+        );
+        assert_eq!(parsed.unknown_status, [0x10, 0x00]);
+        assert_eq!(parsed.text_value, "test-net");
+        assert_eq!(parsed.signal_quality_percent, Some(70));
+        assert_eq!(parsed.link_status, 1);
+    }
+
+    #[test]
+    fn ignores_out_of_range_wifi_signal_quality() {
+        let mut payload = vec![0u8; 47];
+        payload[45] = 255;
+
+        let packet = parse_packet(&packet_with_type(0x43, &payload)).expect("packet parses");
+        let parsed = parse_wifi_payload(&packet).expect("wifi payload parses");
+
+        assert_eq!(parsed.signal_quality_percent, None);
     }
 
     #[test]
