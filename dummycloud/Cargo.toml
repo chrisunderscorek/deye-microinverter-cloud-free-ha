@@ -1,0 +1,15 @@
+[package]
+name = "deye-dummycloud"
+version = "1.1.4"
+edition = "2024"
+license = "Apache-2.0"
+
+[dependencies]
+anyhow = "1.0"
+env_logger = "0.11"
+log = "0.4"
+native-tls = "0.2"
+rumqttc = { version = "0.25.1", default-features = false, features = ["use-native-tls", "url"] }
+serde_json = "1.0"
+tokio = { version = "1.48", features = ["io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+url = "2.5"
