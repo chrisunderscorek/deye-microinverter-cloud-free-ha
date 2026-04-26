@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.2
+
+- Include Home Assistant app metadata files in the runtime image for easier inspection and fallback tooling.
+- Store the runtime image logo as a symlink to the icon file.
+- Rename the v2 readme file to `README.md` to match Home Assistant app repository conventions.
+
 ## 2.0.1
 
 - Enable the custom AppArmor profile explicitly in the Home Assistant app metadata.

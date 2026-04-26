@@ -1,5 +1,3 @@
-ARG BUILD_FROM=ghcr.io/home-assistant/base:latest
-
 FROM rust:1.95-alpine AS builder
 
 WORKDIR /build
@@ -12,7 +10,7 @@ COPY src ./src
 RUN cargo build --release --locked \
     && strip target/release/deye-dummycloud
 
-FROM ${BUILD_FROM}
+FROM ghcr.io/home-assistant/base:latest
 
 ARG BUILD_ARCH=amd64
 ARG BUILD_VERSION=dev
@@ -30,8 +28,10 @@ RUN apk add --no-cache ca-certificates libgcc openssl
 
 COPY --from=builder /build/target/release/deye-dummycloud /usr/local/bin/deye-dummycloud
 COPY run.sh /run.sh
+COPY config.yaml apparmor.txt CHANGELOG.md DOCS.md LICENSE README.md icon.png /app/metadata/
 
-RUN chmod a+x /run.sh
+RUN ln -s icon.png /app/metadata/logo.png \
+    && chmod a+x /run.sh
 
 EXPOSE 10000/tcp
 
