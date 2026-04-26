@@ -9,6 +9,7 @@ It also takes care of Home Assistant autodiscovery leading to things just workin
 
 This folder is also a Home Assistant OS app package for dummycloud. It is not a Home Assistant integration or a patched
 Home Assistant component; it runs the dummycloud service as an HAOS-managed app and exposes port `10000` for the inverter.
+Prebuilt GHCR images are published for `aarch64`/`arm64` and `amd64`.
 
 For installation steps, see [Home Assistant OS Deployment](#home-assistant-os-deployment).
 
@@ -30,7 +31,8 @@ I'd still keep the firewall rules preventing the inverter from phoning home in p
 ## Home Assistant OS Deployment
 
 For Home Assistant OS, install dummycloud as a Home Assistant app from this repository. This is the preferred deployment
-path for HAOS because it uses the Home Assistant app UI for configuration and publishes a prebuilt GHCR image.
+path for HAOS because it uses the Home Assistant app UI for configuration and publishes prebuilt GHCR images for
+`aarch64`/`arm64` and `amd64`.
 
 1. Open Home Assistant and go to `Settings` -> `Apps`.
 2. Open `Install app`.
@@ -53,6 +55,10 @@ mqtt://core-mosquitto:1883
 ```
 
 Keep the firewall rules preventing the inverter from phoning home in place for good measure.
+
+The app uses TCP port `10000` for inverter connections and opens outbound TCP connections to the configured MQTT broker.
+When `mqtts://` is used, certificate validation happens inside that same MQTT/TLS connection; no additional certificate
+check port is required.
 
 ## Standalone Docker Deployment
 

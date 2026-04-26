@@ -15,7 +15,7 @@ You also won't have to share any e-mail address or phone number.
 
 This fork also packages [dummycloud](./dummycloud) as a Home Assistant OS app. The intention is to make the local Deye
 cloud replacement installable from the Home Assistant `Settings` -> `Apps` UI, with MQTT settings configurable in the
-Home Assistant interface and a prebuilt image published on GHCR.
+Home Assistant interface and a prebuilt image published on GHCR. Images are built for `aarch64`/`arm64` and `amd64`.
 
 Add this repository as a Home Assistant app repository:
 
@@ -51,6 +51,7 @@ Here are the main things you will want to know about these microinverters:
 - They can be monitored and controlled via their local ModbusTCP interface
 - You can also completely replace the cloud with a local implementation: [dummycloud](./dummycloud)
 - On Home Assistant OS, [dummycloud](./dummycloud) can be installed as the `Deye Dummycloud` app from this repository
+  with prebuilt images for `aarch64`/`arm64` and `amd64`
 
 **2024-08-20 Update**
 
@@ -216,7 +217,8 @@ and how to deploy a service somewhere. Nothing too arcane of course but if you d
 
 #### Installing the Home Assistant app on HAOS
 
-On Home Assistant OS, the dummycloud can be installed as an app from this repository.
+On Home Assistant OS, the dummycloud can be installed as an app from this repository. Prebuilt app images are available
+for `aarch64`/`arm64` and `amd64`.
 
 1. Open Home Assistant and go to `Settings` -> `Apps`.
 2. Open `Install app`.

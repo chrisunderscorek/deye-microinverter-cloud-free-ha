@@ -31,6 +31,14 @@ For the local Mosquitto app running on the same HAOS host, use this MQTT broker 
 mqtt://core-mosquitto:1883
 ```
 
+Prebuilt app images are published for `aarch64`/`arm64` and `amd64`.
+
+## Networking
+
+The app exposes TCP port `10000` for inverter connections and opens outbound TCP connections to the configured MQTT
+broker. When `mqtts://` is used, certificate validation happens inside that same MQTT/TLS connection; no additional
+certificate check port is required.
+
 ## Inverter Setup
 
 Using the `/config_hide.html` of the inverter webinterface, simply point `Server A Setting` and `Optional Server Setting` to the HAOS host this app is running on, using port `10000`.
