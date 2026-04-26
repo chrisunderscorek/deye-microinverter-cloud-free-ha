@@ -9,3 +9,4 @@
 - Publish multi-architecture images for `aarch64` and `amd64` to GHCR.
 - Install the Alpine build tooling required for native TLS dependencies in the Docker builder image.
 - Pin the Rust Docker builder image and keep the crate on Rust 2021 edition for wider toolchain compatibility.
+- Install static OpenSSL libraries needed for Rust's musl target in the Docker builder image.
