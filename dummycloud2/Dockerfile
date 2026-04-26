@@ -4,7 +4,7 @@ FROM rust:1-alpine AS builder
 
 WORKDIR /build
 
-RUN apk add --no-cache binutils musl-dev openssl-dev pkgconfig
+RUN apk add --no-cache binutils build-base openssl-dev perl pkgconf
 
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src

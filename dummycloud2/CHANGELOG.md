@@ -7,3 +7,4 @@
 - Publish Home Assistant MQTT discovery for PV, grid, inverter, and logger diagnostic entities.
 - Add logger diagnostics for Wi-Fi SSID, signal quality, serial number, IP address, MAC address, firmware version, uptime, report time, and derived last reboot time.
 - Publish multi-architecture images for `aarch64` and `amd64` to GHCR.
+- Install the Alpine build tooling required for native TLS dependencies in the Docker builder image.
