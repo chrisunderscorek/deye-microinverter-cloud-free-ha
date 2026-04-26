@@ -33,6 +33,12 @@ mqtt://core-mosquitto:1883
 
 Prebuilt app images are published for `aarch64`/`arm64` and `amd64`.
 
+## Local development
+
+The Rust service can also be built and run directly on macOS for local testing. The published Home Assistant app images
+target Linux `amd64` and `arm64`. The image size comparison with the original Node.js app will be documented after the
+first published v2 image build.
+
 ## Networking
 
 The app exposes TCP port `10000` for inverter connections and opens outbound TCP connections to the configured MQTT

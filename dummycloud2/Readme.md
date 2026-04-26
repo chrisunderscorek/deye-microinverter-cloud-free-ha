@@ -28,6 +28,12 @@ The dummycloud is configured using environment variables to be container-friendl
 - `MQTT_CHECK_CERT` set to `false` for using `mqtts` with self signed certificate (defaults to `true`)
 - `DUMP_CLIENT_STREAM` (optional) set to `true` or a directory path to dump raw inverter TCP streams for protocol analysis.
 
+## Local development
+
+The Rust service can also be built and run directly on macOS for local testing; the Home Assistant app images target Linux `amd64` and `arm64`.
+
+The GHCR image size comparison with the original Node.js app will be documented after the first published v2 image build.
+
 ## MQTT diagnostics
 
 Besides PV, grid, and inverter telemetry, Deye Dummycloud v2 publishes Home Assistant diagnostic entities for logger status:
