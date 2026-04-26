@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.4
+
+- Add a custom AppArmor profile for the Home Assistant app package.
+- Keep TCP networking available for inverter connections on port `10000` and MQTT or MQTT over TLS broker access.
+- Document the published Home Assistant image architectures.
+
 ## 1.1.3
 
 - Add inverter cloud server setup guidance to the Home Assistant app documentation.
