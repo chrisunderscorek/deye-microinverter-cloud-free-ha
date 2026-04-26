@@ -5,12 +5,12 @@ This Home Assistant app runs the dummycloud service on HAOS and exposes TCP port
 ## Configuration
 
 - `LOGLEVEL`: defaults to `info`; valid values are `trace`, `debug`, `info`, `warn`, and `error`.
-- `MQTT_BROKER_URL`: required MQTT broker URL, for example `mqtt://core-mosquitto` or `mqtt://192.168.178.100`.
+- `MQTT_BROKER_URL`: required MQTT broker URL, for example `mqtt://core-mosquitto` or `mqtt://mqtt.example.local`.
 - `MQTT_USERNAME`: optional MQTT username.
 - `MQTT_PASSWORD`: optional MQTT password. Set `MQTT_USERNAME` as well when using this.
 - `MQTT_CHECK_CERT`: defaults to `true`; set to `false` when using `mqtts` with a self-signed certificate.
 
-## HAOS setup
+## HAOS Setup
 
 1. Open Home Assistant and go to `Settings` -> `Apps`.
 2. Open `Install app`.
@@ -24,7 +24,6 @@ https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha
 5. Install the `Deye Dummycloud` app.
 6. Configure the MQTT broker URL and optional credentials.
 7. Start the app and keep TCP port `10000` exposed.
-8. Point the inverter cloud server setting to the HAOS host IP address.
 
 For the local Mosquitto app running on the same HAOS host, use this MQTT broker URL:
 
@@ -32,4 +31,7 @@ For the local Mosquitto app running on the same HAOS host, use this MQTT broker 
 mqtt://core-mosquitto:1883
 ```
 
-For the HAOS host at `192.168.178.100`, configure the inverter cloud server host as `192.168.178.100` and port `10000`.
+## Inverter Setup
+
+Using the `/config_hide.html` of the inverter webinterface, simply point `Server A Setting` and `Optional Server Setting` to the HAOS host this app is running on, using port `10000`.
+I'd still keep the firewall rules preventing the inverter from phoning home in place for good measure.

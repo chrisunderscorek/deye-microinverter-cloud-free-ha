@@ -44,7 +44,7 @@ https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha
 5. Install the `Deye Dummycloud` app.
 6. Configure the MQTT broker URL and optional credentials.
 7. Start the app and keep TCP port `10000` exposed.
-8. Point the inverter cloud server setting to the HAOS host IP address.
+8. Using the `/config_hide.html` of the inverter web interface, point `Server A Setting` and `Optional Server Setting` to the HAOS host IP address and port `10000`.
 
 For the local Mosquitto app running on the same HAOS host, use this MQTT broker URL:
 
@@ -52,8 +52,7 @@ For the local Mosquitto app running on the same HAOS host, use this MQTT broker 
 mqtt://core-mosquitto:1883
 ```
 
-For the HAOS host at `192.168.178.100`, configure the inverter cloud server host as `192.168.178.100` and port `10000`.
-For more HAOS app details, see [DOCS.md](./DOCS.md).
+Keep the firewall rules preventing the inverter from phoning home in place for good measure.
 
 ## Standalone Docker Deployment
 

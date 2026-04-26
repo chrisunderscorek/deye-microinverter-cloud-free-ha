@@ -252,6 +252,9 @@ There, it is possible to configure
 - Enable/Disable the AP
 - Switch the branding(?)
 
+When using the Home Assistant OS app, remember to set the inverter's cloud server host to the IP address of the HAOS host
+and the cloud server port to `10000`.
+
 <details>
 <summary>Click here to show a screenshot of the page</summary>
 

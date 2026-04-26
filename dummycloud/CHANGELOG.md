@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.3
+
+- Add inverter cloud server setup guidance to the Home Assistant app documentation.
+- Keep the Home Assistant app description concise.
+
 ## 1.1.2
 
 - Add Home Assistant app logo and icon assets for the Deye Dummycloud store entry.
