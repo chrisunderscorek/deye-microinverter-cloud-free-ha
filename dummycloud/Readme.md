@@ -10,26 +10,7 @@ It also takes care of Home Assistant autodiscovery leading to things just workin
 This folder is also a Home Assistant OS app package for dummycloud. It is not a Home Assistant integration or a patched
 Home Assistant component; it runs the dummycloud service as an HAOS-managed app and exposes port `10000` for the inverter.
 
-To install it on HAOS:
-
-1. Open Home Assistant and go to `Settings` -> `Apps`.
-2. Open `Install app`.
-3. Open the repository menu and choose `Repositories` or `Add repository`.
-4. Add this repository URL:
-
-```text
-https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha
-```
-
-5. Install the `Deye Dummycloud` app.
-6. Configure `MQTT_BROKER_URL`. For the local Mosquitto app on the same HAOS host, use:
-
-```text
-mqtt://core-mosquitto:1883
-```
-
-Set optional `MQTT_USERNAME` and `MQTT_PASSWORD` only when your MQTT broker requires authentication. After starting the
-app, point the inverter cloud server host to the HAOS IP address and port `10000`.
+For installation steps, see [Home Assistant OS Deployment](#home-assistant-os-deployment).
 
 ## Usage
 
@@ -46,12 +27,41 @@ The dummycloud is configured using environment variables to be container-friendl
 Using the `/config_hide.html` of the inverter webinterface, simply point `Server A Setting` and `Optional Server Setting` to the host this is running on.
 I'd still keep the firewall rules preventing the inverter from phoning home in place for good measure.
 
-## Deployment
+## Home Assistant OS Deployment
 
-The dummycloud can be started using `npm run start`. Next to this readme, there's also a dockerfile provided.
+For Home Assistant OS, install dummycloud as a Home Assistant app from this repository. This is the preferred deployment
+path for HAOS because it uses the Home Assistant app UI for configuration and publishes a prebuilt GHCR image.
+
+1. Open Home Assistant and go to `Settings` -> `Apps`.
+2. Open `Install app`.
+3. Open the repository menu and choose `Repositories` or `Add repository`.
+4. Add this repository URL:
+
+```text
+https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha
+```
+
+5. Install the `Deye Dummycloud` app.
+6. Configure the MQTT broker URL and optional credentials.
+7. Start the app and keep TCP port `10000` exposed.
+8. Point the inverter cloud server setting to the HAOS host IP address.
+
+For the local Mosquitto app running on the same HAOS host, use this MQTT broker URL:
+
+```text
+mqtt://core-mosquitto:1883
+```
+
+For the HAOS host at `192.168.178.100`, configure the inverter cloud server host as `192.168.178.100` and port `10000`.
 For more HAOS app details, see [DOCS.md](./DOCS.md).
 
-A `docker-compose.yml` entry could for example look like this:
+## Standalone Docker Deployment
+
+Outside Home Assistant OS, dummycloud can still be run directly with Node.js or Docker. The example below is the classic
+standalone Docker Compose setup from the upstream project. For the canonical upstream documentation, see
+[Hypfer/deye-microinverter-cloud-free](https://github.com/Hypfer/deye-microinverter-cloud-free/tree/master/dummycloud).
+
+A standalone `docker-compose.yml` entry could for example look like this:
 
 ```yml
   deye-dummycloud:
