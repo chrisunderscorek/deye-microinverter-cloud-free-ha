@@ -16,9 +16,10 @@ async fn main() -> Result<()> {
     init_logging()?;
 
     let config = AppConfig::from_env()?;
+    let stream_dump = config.stream_dump.clone();
     let publisher = MqttPublisher::connect(config).await?;
 
-    DummyCloudServer::new(publisher).run().await
+    DummyCloudServer::new(publisher, stream_dump).run().await
 }
 
 fn init_logging() -> Result<()> {

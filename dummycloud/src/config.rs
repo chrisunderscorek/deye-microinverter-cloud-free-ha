@@ -1,4 +1,5 @@
 use std::env;
+use std::path::PathBuf;
 
 use anyhow::{Context, Result, bail};
 use log::LevelFilter;
@@ -9,6 +10,12 @@ pub struct AppConfig {
     pub mqtt_username: Option<String>,
     pub mqtt_password: Option<String>,
     pub mqtt_check_cert: bool,
+    pub stream_dump: Option<StreamDumpConfig>,
+}
+
+#[derive(Debug, Clone)]
+pub struct StreamDumpConfig {
+    pub dir: PathBuf,
 }
 
 impl AppConfig {
@@ -36,6 +43,7 @@ impl AppConfig {
             mqtt_username,
             mqtt_password,
             mqtt_check_cert,
+            stream_dump: stream_dump_from_env(),
         })
     }
 }
@@ -58,4 +66,19 @@ fn parse_log_level(value: &str) -> Result<LevelFilter> {
 
 fn non_empty_env(name: &str) -> Option<String> {
     env::var(name).ok().filter(|value| !value.is_empty())
+}
+
+fn stream_dump_from_env() -> Option<StreamDumpConfig> {
+    let value = non_empty_env("DUMP_CLIENT_STREAM")?;
+    let normalized = value.to_ascii_lowercase();
+
+    let dir = match normalized.as_str() {
+        "false" | "0" | "no" | "off" => return None,
+        "true" | "1" | "yes" | "on" => non_empty_env("DUMP_CLIENT_STREAM_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("stream-dumps")),
+        _ => PathBuf::from(value),
+    };
+
+    Some(StreamDumpConfig { dir })
 }
