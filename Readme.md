@@ -34,6 +34,13 @@ Then install either `Deye Dummycloud` or `Deye Dummycloud v2`. When Mosquitto ru
 mqtt://core-mosquitto:1883
 ```
 
+Published GHCR image sizes after the v2.0.1 build:
+
+| Image | `linux/amd64` | `linux/arm64` |
+| --- | ---: | ---: |
+| `ghcr.io/chrisunderscorek/deye-dummycloud-ha:1.1.5` | 38.4 MiB | 37.6 MiB |
+| `ghcr.io/chrisunderscorek/deye-dummycloud2-ha:2.0.1` | 21.4 MiB | 21.8 MiB |
+
 ## Devices
 
 So far, the following devices are known to work like this:
