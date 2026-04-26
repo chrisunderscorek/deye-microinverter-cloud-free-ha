@@ -1,23 +1,15 @@
 # Changelog
 
-## 2.0.4
+## 2.0.5
 
-- Let Home Assistant OS load the bundled AppArmor profile from `apparmor.txt`, matching the legacy app package.
+- Set `mqtt://core-mosquitto:1883` as the default MQTT broker URL for Home Assistant OS installations.
 
-## 2.0.3
+## 2.0.1 - 2.0.4
 
-- Use the boolean AppArmor metadata value expected by the Home Assistant OS 2026.4 Supervisor validator.
-- Restore the v2 readme filename used by the existing Home Assistant OS app package.
-
-## 2.0.2
-
-- Include Home Assistant app metadata files in the runtime image for easier inspection and fallback tooling.
+- Enable the bundled AppArmor profile for Home Assistant OS, matching the legacy app package.
+- Keep the v2 app repository layout compatible with Home Assistant OS 2026.4.
+- Include Home Assistant app metadata files in the runtime image for easier inspection.
 - Store the runtime image logo as a symlink to the icon file.
-- Rename the v2 readme file to `README.md` to match Home Assistant app repository conventions.
-
-## 2.0.1
-
-- Enable the custom AppArmor profile explicitly in the Home Assistant app metadata.
 
 ## 2.0.0
 

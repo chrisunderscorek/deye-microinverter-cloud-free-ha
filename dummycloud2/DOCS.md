@@ -5,7 +5,7 @@ This Home Assistant app runs the Rust dummycloud service on HAOS and exposes TCP
 ## Configuration
 
 - `LOGLEVEL`: defaults to `info`; valid values are `trace`, `debug`, `info`, `warn`, and `error`.
-- `MQTT_BROKER_URL`: required MQTT broker URL, for example `mqtt://core-mosquitto` or `mqtt://mqtt.example.local`.
+- `MQTT_BROKER_URL`: MQTT broker URL. Defaults to `mqtt://core-mosquitto:1883` for the local Mosquitto app on Home Assistant OS.
 - `MQTT_USERNAME`: optional MQTT username.
 - `MQTT_PASSWORD`: optional MQTT password. Set `MQTT_USERNAME` as well when using this.
 - `MQTT_CHECK_CERT`: defaults to `true`; set to `false` when using `mqtts` with a self-signed certificate.

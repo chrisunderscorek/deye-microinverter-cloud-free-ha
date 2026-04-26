@@ -1,5 +1,5 @@
 name: Deye Dummycloud v2
-version: "2.0.4"
+version: "2.0.5"
 slug: deye_dummycloud2
 description: Rust reimplementation of the local Deye Solarman cloud replacement; lighter runtime with lower memory use and no Node.js dependency
 url: https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha/tree/master/dummycloud2
@@ -16,7 +16,7 @@ ports_description:
   10000/tcp: Deye inverter cloud endpoint
 options:
   LOGLEVEL: info
-  MQTT_BROKER_URL: null
+  MQTT_BROKER_URL: mqtt://core-mosquitto:1883
   MQTT_CHECK_CERT: true
 schema:
   LOGLEVEL: list(trace|debug|info|warn|error)

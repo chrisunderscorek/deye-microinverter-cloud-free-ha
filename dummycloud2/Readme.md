@@ -22,7 +22,7 @@ so only one should run at a time.
 The dummycloud is configured using environment variables to be container-friendly to use.
 
 - `LOGLEVEL` (defaults to `info`)
-- `MQTT_BROKER_URL` (no default. Should look like `mqtt://foo.bar`)
+- `MQTT_BROKER_URL` (defaults to `mqtt://core-mosquitto:1883` for Home Assistant OS. Should look like `mqtt://foo.bar`)
 - `MQTT_USERNAME` (no default, optional.)
 - `MQTT_PASSWORD` (no default, optional.)
 - `MQTT_CHECK_CERT` set to `false` for using `mqtts` with self signed certificate (defaults to `true`)
