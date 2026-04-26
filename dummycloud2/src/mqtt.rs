@@ -340,10 +340,10 @@ impl MqttPublisher {
         let now = Instant::now();
         {
             let timestamps = self.autoconf_timestamps.lock().await;
-            if let Some(last_publish) = timestamps.get(logger_serial)
-                && now.duration_since(*last_publish) <= AUTOCONF_INTERVAL
-            {
-                return Ok(());
+            if let Some(last_publish) = timestamps.get(logger_serial) {
+                if now.duration_since(*last_publish) <= AUTOCONF_INTERVAL {
+                    return Ok(());
+                }
             }
         }
 

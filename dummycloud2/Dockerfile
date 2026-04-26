@@ -1,6 +1,6 @@
 ARG BUILD_FROM=ghcr.io/home-assistant/base:latest
 
-FROM rust:1-alpine AS builder
+FROM rust:1.95-alpine AS builder
 
 WORKDIR /build
 
