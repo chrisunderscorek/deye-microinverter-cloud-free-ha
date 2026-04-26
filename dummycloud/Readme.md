@@ -1,15 +1,17 @@
 # Deye-dummycloud
 
-This is a small service that mocks the deye solarman cloud and publishes all the data to an MQTT broker.
+This is the original Node.js service that mocks the deye solarman cloud and publishes all the data to an MQTT broker.
 It also takes care of Home Assistant autodiscovery leading to things just working.
 
 ![dummycloud_demo.png](../img/dummycloud_demo.png)
 
 ## Home Assistant OS app
 
-This folder is also a Home Assistant OS app package for dummycloud. It is not a Home Assistant integration or a patched
-Home Assistant component; it runs the dummycloud service as an HAOS-managed app and exposes port `10000` for the inverter.
+This folder is also a Home Assistant OS app package for the original Node.js dummycloud. It is not a Home Assistant
+integration or a patched Home Assistant component; it runs the dummycloud service as an HAOS-managed app and exposes port `10000` for the inverter.
 Prebuilt GHCR images are published for `aarch64`/`arm64` and `amd64`.
+
+For the Rust reimplementation, see [Deye Dummycloud v2](../dummycloud2).
 
 For installation steps, see [Home Assistant OS Deployment](#home-assistant-os-deployment).
 
@@ -22,39 +24,16 @@ The dummycloud is configured using environment variables to be container-friendl
 - `MQTT_USERNAME` (no default, optional.)
 - `MQTT_PASSWORD` (no default, optional.)
 - `MQTT_CHECK_CERT` set to `false` for using `mqtts` with self signed certificate (defaults to `true`)
-- `DUMP_CLIENT_STREAM` (optional) set to `true` or a directory path to dump raw inverter TCP streams for protocol analysis.
 
 ## Inverter Setup
 
 Using the `/config_hide.html` of the inverter webinterface, simply point `Server A Setting` and `Optional Server Setting` to the host this is running on.
 I'd still keep the firewall rules preventing the inverter from phoning home in place for good measure.
 
-## MQTT diagnostics
-
-Besides PV, grid, and inverter telemetry, dummycloud publishes Home Assistant diagnostic entities for logger status:
-
-- `logger/wifi_ssid`
-- `logger/wifi_signal`
-- `logger/serial_number`
-- `logger/ip_address`
-- `logger/mac_address`
-- `logger/firmware_version`
-- `logger/hardware_version`
-- `logger/uptime_seconds`
-- `logger/report_time`
-- `logger/last_reboot`
-
-The Wi-Fi signal value is derived from observed `0x43` WIFI packets, matches the signal quality from the Deye web UI,
-and is published only when the status text matches the SSID from the logger handshake. The last reboot time is derived
-from the observed `0x48` REPORT packet timestamp minus the report uptime counter.
-
-The Home Assistant MQTT device payload includes the logger serial number, firmware/hardware versions, and the MAC address
-advertised in the handshake when available. The device name remains `Deye Microinverter <logger serial>`.
-
 ## Home Assistant OS Deployment
 
-For Home Assistant OS, install dummycloud as a Home Assistant app from this repository. This is the preferred deployment
-path for HAOS because it uses the Home Assistant app UI for configuration and publishes prebuilt GHCR images for
+For Home Assistant OS, install `Deye Dummycloud` as a Home Assistant app from this repository. This keeps the original
+Node.js implementation available for compatibility and publishes prebuilt GHCR images for
 `aarch64`/`arm64` and `amd64`.
 
 1. Open Home Assistant and go to `Settings` -> `Apps`.

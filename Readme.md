@@ -1,8 +1,9 @@
 # Deye Microinverter - Cloud-free
 
 [![Builder](https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha/actions/workflows/builder.yaml/badge.svg?branch=master)](https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha/actions/workflows/builder.yaml)
-[![GHCR image](https://img.shields.io/badge/GHCR-deye--dummycloud--ha-2496ED?logo=docker&logoColor=white)](https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha/pkgs/container/deye-dummycloud-ha)
-[![Platforms](https://img.shields.io/badge/platform-linux%2Famd64%20%7C%20linux%2Farm64-2496ED?logo=linux&logoColor=white)](https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha/pkgs/container/deye-dummycloud-ha)
+[![GHCR v1](https://img.shields.io/badge/GHCR-deye--dummycloud--ha-2496ED?logo=docker&logoColor=white)](https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha/pkgs/container/deye-dummycloud-ha)
+[![GHCR v2](https://img.shields.io/badge/GHCR-deye--dummycloud2--ha-2496ED?logo=docker&logoColor=white)](https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha/pkgs/container/deye-dummycloud2-ha)
+[![Platforms](https://img.shields.io/badge/platform-linux%2Famd64%20%7C%20linux%2Farm64-2496ED?logo=linux&logoColor=white)](https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha/pkgs/container/deye-dummycloud2-ha)
 
 ![Deye microinverter in the sun](img/banner.jpg)
 
@@ -17,9 +18,9 @@ You also won't have to share any e-mail address or phone number.
 
 ## Home Assistant OS app
 
-This fork also packages [dummycloud](./dummycloud) as a Home Assistant OS app. The intention is to make the local Deye
-cloud replacement installable from the Home Assistant `Settings` -> `Apps` UI, with MQTT settings configurable in the
-Home Assistant interface and a prebuilt image published on GHCR.
+This fork packages the local Deye cloud replacement as Home Assistant OS apps. `Deye Dummycloud` keeps the original
+Node.js implementation, while `Deye Dummycloud v2` is the Rust reimplementation with a lighter runtime, lower memory
+overhead, and no Node.js dependency.
 
 Add this repository as a Home Assistant app repository:
 
@@ -27,7 +28,7 @@ Add this repository as a Home Assistant app repository:
 https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha
 ```
 
-Then install `Deye Dummycloud`. When Mosquitto runs locally on the same HAOS host, use this broker URL:
+Then install either `Deye Dummycloud` or `Deye Dummycloud v2`. When Mosquitto runs locally on the same HAOS host, use this broker URL:
 
 ```text
 mqtt://core-mosquitto:1883
@@ -225,12 +226,12 @@ In local captures, the logger connects to the dummycloud TCP endpoint and usuall
 | Type | Name | Observed role |
 |------|------|---------------|
 | `0x41` | `HANDSHAKE` | Logger metadata such as firmware version, local IP, hardware/software revision, and Wi-Fi SSID. |
-| `0x42` | `DATA` | Microinverter telemetry. The dummycloud currently uses this for PV voltage/current/power, daily and total energy, grid values, radiator temperature, MPPT count, and MQTT discovery. |
+| `0x42` | `DATA` | Microinverter telemetry. Deye Dummycloud v2 currently uses this for PV voltage/current/power, daily and total energy, grid values, radiator temperature, MPPT count, and MQTT discovery. |
 | `0x43` | `WIFI` | Periodic Wi-Fi/logger status packets. In the observed firmware these include the Wi-Fi SSID/status text and a signal-quality byte. |
 | `0x48` | `REPORT` | Short logger report packet. [pysolarmanv5](https://pysolarmanv5.readthedocs.io/) also names this Solarman V5 type `REPORT`. |
 | `0x47` | `HEARTBEAT` | Keepalive packet. |
 
-The dummycloud answers these packet types with the same time-response frame shape, using response type `request_type - 0x30`.
+Deye Dummycloud v2 answers these packet types with the same time-response frame shape, using response type `request_type - 0x30`.
 
 The observed `REPORT` payload is 60 bytes. It does not appear to contain inverter energy telemetry. The useful fields seen
 so far are a payload version byte, an uptime-like counter that resets after logger reboot, a base timestamp plus offset
@@ -241,10 +242,10 @@ checks, and reboot detection, but not for additional PV/grid measurements at thi
 The observed `WIFI` payload is 47 bytes. Bytes `15..45` contain a zero-padded text field. In the captures this was either
 the configured Wi-Fi SSID or another short logger status token. Byte `45` behaved like Wi-Fi signal quality in percent
 and matches the signal quality shown by the Deye web UI within the observed polling jitter. Byte `46` behaved like a
-link/status flag. The dummycloud only publishes the signal value from the newest WIFI record whose text field matches
+link/status flag. Deye Dummycloud v2 only publishes the signal value from the newest WIFI record whose text field matches
 the SSID from the preceding handshake, so older cached status records do not overwrite the live value.
 
-The Home Assistant MQTT discovery now includes diagnostic entities for the logger Wi-Fi SSID, Wi-Fi signal, uptime at the
+The Deye Dummycloud v2 Home Assistant MQTT discovery includes diagnostic entities for the logger Wi-Fi SSID, Wi-Fi signal, uptime at the
 latest report, report time, derived last reboot time, serial number, IP address, MAC address, firmware version, and
 hardware version. The MQTT device payload also includes the logger serial number, firmware/hardware versions, and the
 MAC address advertised in the handshake when available. The captures did not show a plaintext Wi-Fi password.
@@ -252,8 +253,8 @@ Keep raw stream dumps out of git because they may still contain local network id
 
 #### Installing the Home Assistant app on HAOS
 
-On Home Assistant OS, the dummycloud can be installed as an app from this repository. Prebuilt app images are available
-for `aarch64`/`arm64` and `amd64`.
+On Home Assistant OS, both dummycloud variants can be installed as apps from this repository. Prebuilt app images are
+available for `aarch64`/`arm64` and `amd64`.
 
 1. Open Home Assistant and go to `Settings` -> `Apps`.
 2. Open `Install app`.
@@ -264,7 +265,7 @@ for `aarch64`/`arm64` and `amd64`.
 https://github.com/chrisunderscorek/deye-microinverter-cloud-free-ha
 ```
 
-5. Install the `Deye Dummycloud` app.
+5. Install `Deye Dummycloud` for the original Node.js implementation or `Deye Dummycloud v2` for the Rust implementation.
 6. Configure `MQTT_BROKER_URL`. For the local Mosquitto app on the same HAOS host, use:
 
 ```text
@@ -273,7 +274,7 @@ mqtt://core-mosquitto:1883
 
 After starting the app, configure the inverter cloud server host to the HAOS IP address and port `10000`.
 
-For further information, check out the [dummycloud](./dummycloud) folder.
+For further information, check out [dummycloud](./dummycloud) and [dummycloud2](./dummycloud2).
 
 ## Misc
 
