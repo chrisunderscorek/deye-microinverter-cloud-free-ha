@@ -191,7 +191,10 @@ async fn process_packet(
                 return Ok(());
             }
         },
-        RequestType::Wifi | RequestType::Heartbeat | RequestType::Unknown(_) => {}
+        RequestType::Wifi
+        | RequestType::Heartbeat
+        | RequestType::Report
+        | RequestType::Unknown(_) => {}
     }
 
     let response = build_time_response(&packet);

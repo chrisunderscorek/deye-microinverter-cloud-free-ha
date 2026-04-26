@@ -226,6 +226,7 @@ Protocol.MESSAGE_REQUEST_TYPES = {
     DATA: 0x42,
     WIFI: 0x43,
     HEARTBEAT: 0x47,
+    REPORT: 0x48,
 };
 
 Protocol.MESSAGE_RESPONSE_TYPES = {

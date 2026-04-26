@@ -69,6 +69,7 @@ pub enum RequestType {
     Data,
     Wifi,
     Heartbeat,
+    Report,
     Unknown(u8),
 }
 
@@ -79,6 +80,7 @@ impl RequestType {
             0x42 => Self::Data,
             0x43 => Self::Wifi,
             0x47 => Self::Heartbeat,
+            0x48 => Self::Report,
             other => Self::Unknown(other),
         }
     }
@@ -89,6 +91,7 @@ impl RequestType {
             Self::Data => "DATA",
             Self::Wifi => "WIFI",
             Self::Heartbeat => "HEARTBEAT",
+            Self::Report => "REPORT",
             Self::Unknown(_) => "UNKNOWN",
         }
     }
