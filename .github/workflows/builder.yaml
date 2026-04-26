@@ -20,3 +20,10 @@ jobs:
     with:
       app: dummycloud
       publish: ${{ github.event_name != 'pull_request' }}
+
+  dummycloud2:
+    name: Deye Dummycloud v2
+    uses: ./.github/workflows/build-app.yaml
+    with:
+      app: dummycloud2
+      publish: ${{ github.event_name != 'pull_request' }}
